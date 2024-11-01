@@ -8,8 +8,8 @@ import os
 api_key = '' # a sua API KEY do Unsplash 
 filtro = 'people' # oq vai pesquisar
 dest = 'datasets/images/people/train' # onde vai salvar as imgs
-t_img = 99
-i_pg = 30
+t_img = 99 # total de imagens
+i_pg = 30 # imagens por pagina
 
 if not os.path.exists(dest): # cria a pasta se n existir
     os.makedirs(dest)
