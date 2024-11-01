@@ -5,7 +5,7 @@
 import requests
 import os
 
-api_key = 't3aoXTl1h2BD9vtMi8Fv_wP2mTshMUUff6w6Cj-zLpY' # a sua API KEY do Unsplash 
+api_key = '' # a sua API KEY do Unsplash 
 filtro = 'people' # oq vai pesquisar
 dest = 'datasets/images/people/train' # onde vai salvar as imgs
 t_img = 99
