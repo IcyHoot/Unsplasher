@@ -1,4 +1,4 @@
-import torch
+import torch # pip install torch
 print(torch.__version__)
 
 print('GPU Configurada: ', torch.cuda.is_available())
