@@ -1,119 +1,141 @@
 # This Python script is using the `requests` library to interact with the Unsplash
 # API in order to download images based on a specific search query (in this case,
 # 'pessoas' which means 'people'). Here's a breakdown of what the script is doing:
+
 import tkinter as tk
 from tkinter import messagebox, simpledialog, filedialog
-
 import requests
-import threading
 import os
 import json
 
-entry_filtro = None
-entry_dest = None
 root = tk.Tk()
-api_key = 't3aoXTl1h2BD9vtMi8Fv_wP2mTshMUUff6w6Cj-zLpY' # a sua API KEY do Unsplash 
-filtro = '' # oq vai pesquisar
-dest = '' # onde vai salvar as imgs
-t_img = ''
-passw = ''
-max_t = 3
-i_pg = 30
-
-# url q ele vai utilizar para buscar as imgs
-url = f'https://api.unsplash.com/search/photos?query={filtro}&client_id={api_key}'
-
+user = os.getlogin()
+api_key = ""  # a sua API KEY do Unsplash
+filtro = ""  # oq vai pesquisar
+dest = ""  # onde vai salvar as imgs
+total_img = ""  # total de imgs
+password = ""  # senha
+base = f"C:/Users/{user}/Documents/.img-down/config"  # padrão da config file
+url = f"https://api.unsplash.com/search/photos?query={filtro}&client_id={api_key}"
 response = requests.get(url)
 
-def jsonsaver():
-    root.withdraw()
-    config = {'password': passw, 'tentativas': max_t}
-    with open('config.json', 'w') as f:
-        json.dump(config, f)
+def mkdir(dest):
+    if not os.path.exists(dest):
+        os.makedirs(dest)
 
 def jsonloader():
     root.withdraw()
-    global passw, max_t
+    global password, max_t, api_key
     try:
-        with open('config.json', 'r') as f:
+        with open(os.path.join(base, "config.json"), "r") as f:
             config = json.load(f)
-            passw = config.get('password', '0000')
-            max_t = config.get('tentativas', 3)
+            password = config.get("password", "")
+            api_key = config.get("api_key", "")
     except FileNotFoundError:
-        passw = simpledialog.askstring('Image Downloader','Arquivo de Configurações não encontrado! \nDigite uma senha: ')
+        messagebox.showwarning(
+            "Image Downloader", "Arquivo de Configurações não encontrado!"
+        )
+        password = simpledialog.askstring("Image Downloader", "Digite uma senha:")
+        api_key = simpledialog.askstring("Image Downloader", "Digite a sua API Key:")
+        if password and api_key:
+            messagebox.showinfo(
+                "Image Downloader", "Senha e API Key definidos com sucesso!"
+            )
+            jsoncreate()
+        else:
+            messagebox.showerror("Image Downloader", "Digite uma senha e API Key!")
+            root.quit()
+            return
         return
+    except json.JSONDecodeError:
+        messagebox.showerror("Unsplasher", "O arquivo de config está corrompido!")
 
-def passUser(): # função de verif
+def jsoncreate():
+    global base, password, api_key
+    root.withdraw()
+    mkdir(base)
+    config = {"password": password, "api_key": api_key}
+    with open(os.path.join(base, "config.json"), "w") as f:
+        json.dump(config, f)
+
+def download():  # inicia o download das imagens com base no dados fornecidos
+    total = int(total_img)
+    index_pg = 30  # imgs por page
+
+    for page in range(
+        1, (total // index_pg) + 2
+    ):  # +2 pra garantir q vai pegar 100 imagens
+        url = f"https://api.unsplash.com/search/photos?query={filtro}&client_id={api_key}&per_page={index_pg}&page={page}"
+        response = requests.get(url)
+
+        data = response.json()
+        if "results" in data:
+            for i, image in enumerate(data["results"]):
+                try:
+                    response = requests.get(url)
+                    response.raise_for_status()
+                    data = response.json()
+
+                    img_url = image["urls"]["regular"]
+                    img_data = requests.get(img_url).content
+                    file_number = (
+                        page - 1
+                    ) * index_pg + i  # nome do arquivo com indice correto
+                    with open(
+                        os.path.join(dest, f"{filtro}_{file_number}.jpg"), "wb"
+                    ) as handler:
+                        handler.write(img_data)
+                    print(f"Imagem {file_number + 1} baixada.")
+                    if file_number + 1 >= total:
+                        messagebox.showinfo("Image Downloader",f"Download finalizado! \n\nFiltro: {filtro} \nDestino: {dest} \nTotal de Imagens: {total}",)
+                        break
+                    else:
+                        print('Nenhuma imagem encontrada ou chave "results" nao encontrada.')
+                        # print(data)
+                except requests.exceptions.RequestException as e:
+                    messagebox.showerror("Unsplasher", f"Erro ao buscar imagem: {e}")
+                except OSError as e:
+                    messagebox.showerror("Unsplasher", f"Não foi possivel salvar a imagem: {e}")
+
+def passuser():  # função de verif
     root.withdraw()
     t = 0
     while True:
-        pw = simpledialog.askstring('Image Downloader', 'Digite a sua senha: ')
+        pw = simpledialog.askstring("Image Downloader", "Digite a sua senha: ")
         if pw:
-            if pw == passw:
-                messagebox.showinfo('Image Downloader', 'SENHA CORRETA. \nIniciando o sistema.')
-                main()
+            if pw == password:
+                messagebox.showinfo("Image Downloader", "SENHA CORRETA. \nIniciando o sistema.")
+                get_user()
                 break
+            elif pw is None:
+                messagebox.showwarning("Image Downloader", "Insira uma senha!")
+                return
             else:
                 t += 1
-                messagebox.showwarning('Image Downloader',f'SENHA INCORRETA. \nTentativa: {t}')
+                messagebox.showwarning("Image Downloader", f"SENHA INCORRETA. \nTentativa: {t}")
                 if t == max_t:
-                    messagebox.showwarning('Image Downloader','Tente novamente mais tarde.')
+                    messagebox.showwarning("Image Downloader", "Tente novamente mais tarde.")
                     root.quit()
                     break
-        else:
-            messagebox.showwarning('Image Downloader','Insira uma senha!')
-
-def main():
-    global filtro, dest, t_img
-    filtro = simpledialog.askstring('Image Downloader','Insira o Filtro: ')
-    print('Filtro: ', filtro)
-    messagebox.showinfo('Image Downloader','Escolha o diretório')
-    dest = filedialog.askdirectory(title='Escolha o diretório.')
-    print('Destino: ', dest)
-    t_img = simpledialog.askinteger('Image Downloader', 'Insira a Quantidade: ')
-    print('Quantidade: ', t_img)
-    if filtro is not None and t_img is not None and dest is not None:
-        download()
-
-def mkdir(dest): # função que cria o destino se for falso
-        if not os.path.exists(dest):
-            os.makedirs(dest)
-
-def thread():
-    threading.Thread(target=download())
-    threading.Thread(target=passUser())
-    threading.Thread(target=main())
-
-def download(): # inicia o download das imagens com base no dados fornecidos
-    t_Img = int(t_img)
-    for page in range(1, (t_Img // i_pg) + 2): # +2 pra garantir q vai pegar 100 imagens
-        url = f'https://api.unsplash.com/search/photos?query={filtro}&client_id={api_key}&per_page={i_pg}&page={page}'
-        response = requests.get(url)
-
-        if response.status_code == 401:
-            print('Erro 401: Nao autorizado. Verifique sua chave API.')
-        elif response.status_code != 200:
-            print(f'Nao foi possivel buscar a imagem: {response.status_code}')
-            print(response.json())
-        else:
-            data = response.json()
-
-        if 'results' in data:
-            for i, image in enumerate(data['results']):
-                img_url = image['urls']['regular']
-                img_data = requests.get(img_url).content
-                file_number = (page - 1) * i_pg + i # nome do arquivo com indice correto
-                with open(os.path.join(dest, f'img_{file_number}.jpg'), 'wb') as handler:
-                    handler.write(img_data)
-                print(f'imagem {file_number + 1} baixada.')
-                
-                if file_number + 1 >= t_Img:
-                    messagebox.showinfo('Image Downloader',f'Download finalizado! \n\nFiltro: {filtro} \nDestino: {dest} \nTotal de Imagens: {t_Img}')
+                else:
+                    root.quit()
                     break
-        else:
-            print('Nenhuma imagem encontrada ou chave "results" nao encontrada.')
-            print(data)
+
+def get_user():
+    global filtro, dest, total_img
+    filtro = simpledialog.askstring("Image Downloader", "Digite o filtro de pesquisa:")
+    dest = filedialog.askdirectory(title="Selecione o destino das imagens:")
+    total_img = simpledialog.askstring("Image Downloader", "Digite o total de imagens:")
+    if filtro and dest and total_img:
+        try:
+            download()
+        except ValueError:
+            messagebox.showerror(
+                "Image Downloader",
+                "Total de imagens inválido. Insira um número inteiro.",
+            )
+    else:
+        messagebox.showerror("Image Downloader", "Preencha todos os campos!")
 
 jsonloader()
-jsonsaver()
-passUser()
+passuser()
