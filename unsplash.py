@@ -7,6 +7,10 @@ from tkinter import messagebox, simpledialog, filedialog
 import requests
 import os
 import json
+from cryptography.fernet import Fernet # Importar Fernet
+from cryptography.hazmat.primitives import hashes
+from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
+from base64 import urlsafe_b64encode, b64decode # Para lidar com a chave
 
 root = tk.Tk()
 user = os.getlogin()
@@ -23,40 +27,95 @@ def mkdir(dest):
     if not os.path.exists(dest):
         os.makedirs(dest)
 
+def derive_key(password: str, salt: bytes):
+    kdf = PBKDF2HMAC(
+        algorithm=hashes.SHA256(),
+        length=32,
+        salt=salt,
+        iterations=100000,
+    )
+    key = urlsafe_b64encode(kdf.derive(password.encode()))
+    return key
+
+def generate_key(password_input: str):
+    global fernet_key
+    
+    salt_path = os.path.join(base, 'salt.salt')
+    salt = None
+    mkdir(base)
+    if os.path.exists(salt_path):
+        with open(salt_path, 'rb') as f:
+            salt = f.read()
+    else:
+        salt = os.urandom(16)
+        with open(salt_path, 'wb') as f:
+            f.write(salt)
+            
+    fernet_key = Fernet(derive_key(password_input, salt))
+    
+    return fernet_key
+
 def jsonloader():
     root.withdraw()
-    global password, max_t, api_key
+    global password, api_key, fernet_key
     try:
-        with open(os.path.join(base, "config.json"), "r") as f:
-            config = json.load(f)
-            password = config.get("password", "")
-            api_key = config.get("api_key", "")
+        master_pass = simpledialog.askstring('Image Downloader', 'Digite sua senha mestra para descriptografar:')
+        if not master_pass:
+            messagebox.showwarning('Image Downloader', 'Senha mestra necessária para descriptografar. Saindo.')
+            root.quit()
+            return
+        fernet_key = generate_key(master_pass)
+        
+        with open(os.path.join(base, "config.json"), "rb") as f:
+            encrypted_data = f.read()
+            decrypted_data = fernet_key.decrypt(encrypted_data)
+            config = json.loads(decrypted_data.decode())
+            
+            password = config.get('password', '')
+            api_key = config.get('api_key', '')
     except FileNotFoundError:
-        messagebox.showwarning(
-            "Image Downloader", "Arquivo de Configurações não encontrado!"
-        )
+        messagebox.showwarning("Image Downloader", "Arquivo de Configurações não encontrado!")
+        master_pass = simpledialog.askstring('Image Downloader', 'Crie uma chave mestra: ')
+        if not master_pass:
+            messagebox.showwarning('Image Dwonloader', 'Uma chave mestra é necessária!')
+            root.quit()
+            return
+        fernet_key = generate_key(master_pass)
+        
         password = simpledialog.askstring("Image Downloader", "Digite uma senha:")
         api_key = simpledialog.askstring("Image Downloader", "Digite a sua API Key:")
         if password and api_key:
-            messagebox.showinfo(
-                "Image Downloader", "Senha e API Key definidos com sucesso!"
-            )
+            messagebox.showinfo("Image Downloader", "Senha e API Key definidos com sucesso!")
             jsoncreate()
         else:
             messagebox.showerror("Image Downloader", "Digite uma senha e API Key!")
             root.quit()
             return
         return
-    except json.JSONDecodeError:
-        messagebox.showerror("Unsplasher", "O arquivo de config está corrompido!")
+    except Exception as e:
+        messagebox.showerror('Image Downloader', f'Erro ao carregar ou descriptografar o arquivo de config: {e}. Verifique a chave mestra ou o arquivo.')
+        root.quit()
+        return
 
 def jsoncreate():
-    global base, password, api_key
+    global base, password, api_key, fernet_key, max_t
     root.withdraw()
     mkdir(base)
-    config = {"password": password, "api_key": api_key}
-    with open(os.path.join(base, "config.json"), "w") as f:
-        json.dump(config, f)
+    if not fernet_key:
+        messagebox.showerror('Image Downloader', 'Chave de criptografia não disponível. Não foj possível salvar.')
+        root.quit()
+        return
+    
+    config = {
+        "\npassword": password,
+        "\napi_key": api_key
+        }
+    json_bytes = json.dumps(config).encode()
+    encrypted_json = fernet_key.encrypt(json_bytes)
+    
+    with open(os.path.join(base, "config.json"), "wb") as f:
+        f.write(encrypted_json)
+    messagebox.showinfo('Image Downloader', 'Configurações salvas e criptografadas com sucesso!')
 
 def download():  # inicia o download das imagens com base no dados fornecidos
     total = int(total_img)
