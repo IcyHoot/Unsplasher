@@ -15,14 +15,14 @@ class UnsplasherFunc:
         self.base = f"C:/Users/{user}/Documents/.img-down/config"  # config.json default directory
         self.config_path = os.path.join(self.base, "config.json")
         self.url = f"https://api.unsplash.com/search/photos?query={filtro}&client_id={api_key}" # Unsplash API URL
-        self.response = requests.get(url)
-        self.salt_path = os.path.join(base, 'salt.salt') # Salt must be persistent for the same password generate the same key
+        self.response = requests.get(self.url)
+        self.salt_path = os.path.join(self.base, 'salt.salt') # Salt must be persistent for the same password generate the same key
         self.fernet_key = None
         self.max_attempts = 3
         
     def _show_popup(self, title, message):
         if self.show_popup_callback:
-            self.show_popup_callback:(title, message)
+            self.show_popup_callback(title, message)
         else:
             print(f'POPUP (Logica): {title} - {message}')
 
@@ -81,9 +81,9 @@ class UnsplasherFunc:
     def save_config(self, password_app, api_key_input. master_password):
         self.password = password_app
         self.api_key = api_key_input
-        self.fernet_key = self.generate_key(master_password)
+        self.fernet_key = self.generate_key(self.master_password)
     
-        if not fernet_key: # Make's sure the key is Loaded/Created
+        if not self.fernet_key: # Make's sure the key is Loaded/Created
             self._show_popup('Erro ao salvar', 'Chave de criptografia não disponível.')
             return False
     
@@ -120,75 +120,49 @@ class UnsplasherFunc:
                 
             index_per_page = 30
             downloaded_count = 0
-    for page in range(1, (total // index_pg) + 2):
-        url = f"https://api.unsplash.com/search/photos?query={filtro}&client_id={api_key}&per_page={index_pg}&page={page}"
-        response = requests.get(url)
+            
+            for page in range(1, (total_images_int // index_per_page) + 2):
+                if downloaded_count >=total_images_int:
+                    break
+                url = f"https://api.unsplash.com/search/photos?query={search_filter}&client_id={self.api_key}&per_page={index_per_page}&page={page}"
+                response = requests.get(url)
+                response.raise_for_status()
+                data = response.json()
 
-        data = response.json()
-        if "results" in data:
-            for i, image in enumerate(data["results"]):
-                try:
-                    response = requests.get(url)
-                    response.raise_for_status()
-                    data = response.json()
+                if "results" in data:
+                    for i, image in enumerate(data["results"]):
+                        if downloaded_count >= total_images_int:
+                            break
+                        try:
+                            img_url = image["urls"]["regular"]
+                            img_data = requests.get(img_url).content
+                            file_number = (page - 1) * index_per_page + i  # Name of the correct File & Index
+                            file_path = os.path.join(dest_folder, f'{search_filter}_{file_number}')
 
-                    img_url = image["urls"]["regular"]
-                    img_data = requests.get(img_url).content
-                    file_number = (
-                        page - 1
-                    ) * index_pg + i  # Name of the correct File & Index
-                    with open(
-                        os.path.join(dest, f"{filtro}_{file_number}.jpg"), "wb"
-                    ) as handler:
-                        handler.write(img_data)
-                    print(f"Imagem {file_number + 1} baixada.")
-                    if file_number + 1 >= total:
-                        messagebox.showinfo("Image Downloader",f"Download finalizado! \n\nFiltro: {filtro} \nDestino: {dest} \nTotal de Imagens: {total}",)
-                        break
-                    else:
-                        print('Nenhuma imagem encontrada ou chave "results" nao encontrada.')
+                            with open(file_path, 'wb') as handler:
+                                handler.write(img_data)
+                            downloaded_count += 1
+                            update_progress_callback(f'Baixando: {downloaded_count}/{total_images_int} (Imagem {file_number + 1})')
+                        
                         # print(data)
-                except requests.exceptions.RequestException as e:
-                    messagebox.showerror("Unsplasher", f"Erro ao buscar imagem: {e}")
-                except OSError as e:
-                    messagebox.showerror("Unsplasher", f"Não foi possivel salvar a imagem: {e}")
-
-def passuser():  # User Data verification
-    root.withdraw()
-    t = 0
-    while True:
-        pw = simpledialog.askstring("Image Downloader", "Digite a sua senha: ")
-        if pw:
-            if pw == password:
-                messagebox.showinfo("Image Downloader", "SENHA CORRETA. \nIniciando o sistema.")
-                get_user()
-                break
-            elif pw is None:
-                messagebox.showwarning("Image Downloader", "Insira uma senha!")
-                return
-            else:
-                t += 1
-                messagebox.showwarning("Image Downloader", f"SENHA INCORRETA. \nTentativa: {t}")
-                if t == max_t:
-                    messagebox.showwarning("Image Downloader", "Tente novamente mais tarde.")
-                    root.quit()
-                    break
-                else:
-                    root.quit()
-                    break
-
-def get_user(): # Get's User Data if it's None
-    global filtro, dest, total_img
-    filtro = simpledialog.askstring("Image Downloader", "Digite o filtro de pesquisa:")
-    dest = filedialog.askdirectory(title="Selecione o destino das imagens:")
-    total_img = simpledialog.askstring("Image Downloader", "Digite o total de imagens:")
-    if filtro and dest and total_img:
-        try:
-            download()
+                        except requests.exceptions.RequestException as e:
+                            self._show_popup('Erro de Download', f'Não foi possível baixar a imagem: {e}. Imagem {file_number + 1} pulada.')
+                        except OSError as e:
+                            self._show_popup('Erro de Arquivo', f'Não foi possível salvar a imagem: {e}. Imagem {file_number + 1} pulada.')
+                    else:
+                        self._show_popup('Alerta', f'Nenhuma Imagem encontrada: {search_filter} na página {page} ou chave "results" ausente.')
+                        break
+                
+                update_progress_callback(f'Download Finalizado! Baixadas: {downloaded_count}/{total_images_int} imagens.')
+                self._show_popup('Download Concluído', f'Download finalizado! \n\nFiltro: {search_filter} \nDestino: {dest_folder} \nTotal de Imagens Baixadas: {downloaded_count}')
+                return True
+        
         except ValueError:
-            messagebox.showerror("Image Downloader", "Total de imagens inválido. Insira um número inteiro.",)
-    else:
-        messagebox.showerror("Image Downloader", "Preencha todos os campos!")
-
-jsonloader() # Calls JSONLoader Function
-passuser() # Calls the User verification Function
+            self._show_popup('Erro de API', f'Erro na requisição à API: {e}. Verifique sua conexão e API Key.')
+            return False
+        except requests.exceptions.RequestException as e:
+            self._show_popup('Erro de API', f'Erro na requisição à API: {e}. Verifique sua conexão e API Key.')
+            return False
+        except Exception as e:
+            self._show_popup('Erro Inesperado', f'Ocorreu um erro inesperado durante o download: {e}.')
+            return False
