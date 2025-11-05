@@ -1,5 +1,5 @@
 <p align="center" width="1280" height="291">
-  <img src="Unsplasher.png" alt="Image Downloader Logo" width="200"/>
+  <img src="Unsplasher.png" alt="Image Downloader Logo" width="1280"/>
 </p>
 
 
