@@ -1,4 +1,4 @@
-<p align="center">
+<p align="center" width="1280" height="291">
   <img src="Unsplasher.png" alt="Image Downloader Logo" width="200"/>
 </p>
 
