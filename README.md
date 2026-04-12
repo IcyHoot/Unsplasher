@@ -22,8 +22,7 @@ Python-based tool made to automate dataset downloads, specially for AI training.
 
 - Compatible with multiple operating systems (Windows, Linux, and macOS)
 
-## 💡 Use Cases
-
+# 💡 Use Cases
 - Dataset collection for AI training
 - Automation of bulk image downloads
 - Rapid prototyping for computer vision projects
