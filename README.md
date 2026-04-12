@@ -52,9 +52,13 @@ _The program will automatically download the images, displaying progress and sta
 - Cryptography
 - Requests
 To Install:
+Windows:
 ```bash
-  pip install requests cryptography tkinter
+  pip install requests cryptography
 ```
+Linux:
+Tkinter usually come pre-installed with Python.
+On Linux, you may need to install it manually (e.g., python3-tk).
 
 # 🧩 How it Works?
 
