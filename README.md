@@ -6,7 +6,7 @@
 [![GPLv3 License](https://img.shields.io/badge/License-GPL%20v3-yellow.svg)](https://opensource.org/licenses/)
 # Unsplasher
 
-Python-based tool made to automate dataset downloads, specially for AI training. It reduces manual downloading methods to a more automated & user-friendly alternative.
+Python-based tool made to automate dataset downloads, especially for AI training. It reduces manual downloading methods to a more automated & user-friendly alternative.
 
 # 🚀 Features
 
