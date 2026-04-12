@@ -6,7 +6,7 @@
 [![GPLv3 License](https://img.shields.io/badge/License-GPL%20v3-yellow.svg)](https://opensource.org/licenses/)
 # Unsplasher
 
-Unsplasher is a Auto-Image-Downloader made using Python, TKinter, Unsplash API & Beautiful Soup specially for AI training. You can download any image contained in Unplash, any resolution size [LATER] and how many you want.
+Python-based tool made to automate dataset downloads, specially for AI training. It reduces manual downloading methods to a more automated & user-friendly alternative.
 
 # 🚀 Features
 
@@ -22,6 +22,11 @@ Unsplasher is a Auto-Image-Downloader made using Python, TKinter, Unsplash API &
 
 - Compatible with multiple operating systems (Windows, Linux, and macOS)
 
+## 💡 Use Cases
+
+- Dataset collection for AI training
+- Automation of bulk image downloads
+- Rapid prototyping for computer vision projects
 
 # 🧰 Usage
 1. Run the script
@@ -52,7 +57,7 @@ To Install:
   pip install requests cryptography tkinter
 ```
 
-# 🧩 How its made?
+# 🧩 How it Works?
 
 The Image Downloader combines three main areas of Python development:
 
@@ -62,7 +67,7 @@ The Image Downloader combines three main areas of Python development:
 
 - Generates a persistent salt file so the same password always produces the same encryption key.
 
-- Encrypts the config.json file using Fernet, which provides AES-128 encryption with HMAC authentication.
+- Encrypts the config.json file using Fernet, which provides AES internal encryption with HMAC authentication.
 
 
 
